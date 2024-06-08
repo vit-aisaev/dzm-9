@@ -87,6 +87,13 @@ def get_columns(cursor: pg.extensions.cursor, schema: str, tablename: str):
             # just for text array for now
             if c[2] == '_text':
                 dt = 'text[]'
+            elif c[2] == '_float4':
+                dt = 'real[]'
+            else:
+                raise RuntimeError('Не задана обработка для типа массива:', c[2])
+        elif dt.lower() == 'user-defined':
+            dt = c[2]
+
         rebuild.append(tuple([c[0], dt]))
 
     if len(rebuild) == 0:

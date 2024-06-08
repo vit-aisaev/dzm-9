@@ -21,7 +21,7 @@ TODO: что-то сделать с сообщением о входящих п�
 #    warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 
 
-SCHEMA = 'schema01'
+SCHEMA = 'roentgen'
 CREDENTIALS = 'assets/credentials.json'
 
 logger = Logger(__name__)
@@ -177,69 +177,6 @@ class DB:
             except Exception as e:
                 logger.error(f"Ошибка при выполнении запроса: {repr(e)}\nQuery:\n{q}")
                 raise
-
-    def update_last_news_date(self, cursor, source_uid, last_date):
-        """
-        Сохраняет дату последней новости в таблице источников.
-        Подтверждение транзакции должно быть сделано вовне.
-        :param cursor: курсор БД
-        :param last_date: дата последней новости
-        :param source_uid: ID источника
-        """
-        q = f"UPDATE {self.schema}.news_source SET last_date = '{last_date}' WHERE uid = '{source_uid}'"
-        cursor.execute(q)
-
-    def get_active_channels(self, keep_alive=True):
-        """
-        Возвращает активные каналы.
-
-        :param keep_alive: признак оставить сессию открытой
-        :return: датафрейм с активными каналами
-        """
-
-        with self.get_cursor() as cursor:
-            try:
-                q = f"SELECT uid, source, channel, title, last_date" \
-                    f" FROM {self.schema}.news_source" \
-                    f" WHERE active and deleted_at is null;"
-                cursor.execute(q)
-                channels = get_all(cursor)
-            except Exception as e:
-                logger.error(f"Ошибка при выполнении запроса: {repr(e)}\nQuery:\n{q}")
-                raise
-
-        if not keep_alive:
-            self.close()
-
-        return channels
-
-    def get_raw_unparsed(self, limit: int, keep_alive: bool = True) -> pd.DataFrame:
-        """
-        Читает нераспарсенные новости из таблицы news_raw и возвращает результат в виде датафрейма.
-        Новость считается нераспарсенной, если она отсутствует в таблице news.
-        :param limit: количество считываемых новостей
-        :param keep_alive: признак оставить сессию открытой
-        :return: считанные данные
-        """
-        with self.get_cursor() as cursor:
-            try:
-                q = (f"SELECT r.uid as raw_uid, r.source_uid, r.news_date, r.raw"
-                     f" FROM {self.schema}.news_raw AS r"
-                     f" WHERE deleted_at is null AND NOT EXISTS"
-                     f" (SELECT 1 FROM {self.schema}.news AS n WHERE n.raw_uid = r.uid)"
-                     f" ORDER BY r.news_date"
-                     f" LIMIT {limit};"
-                     )
-                cursor.execute(q)
-            except Exception as e:
-                logger.error(f"Ошибка при выполнении запроса: {repr(e)}\nQuery:\n{q}")
-                raise
-            raw_unparsed = get_all(cursor)
-
-        if not keep_alive:
-            self.close()
-
-        return raw_unparsed
 
 
 class Transaction:
