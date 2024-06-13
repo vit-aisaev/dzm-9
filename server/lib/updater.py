@@ -4,9 +4,15 @@ from psycopg2.extensions import register_adapter, AsIs
 import numpy as np
 import pandas as pd
 import logging
-
-
 # import utils
+
+# маппинг типов колонок на тип данных для создания временной таблицы
+ARRAY_TYPE_MAP = {
+    '_text': 'text[]',
+    '_float4': 'real[]',
+    '_int2': 'smallint[]',
+    '_varchar': 'varchar[]',
+}
 
 
 def adapt_numpy_int64(numpy_int64):
@@ -84,14 +90,10 @@ def get_columns(cursor: pg.extensions.cursor, schema: str, tablename: str):
     for c in columns:
         dt = c[1]
         if dt.lower() == 'array':
-            # just for text array for now
-            if c[2] == '_text':
-                dt = 'text[]'
-            elif c[2] == '_float4':
-                dt = 'real[]'
-            else:
+            if c[2] not in ARRAY_TYPE_MAP:
                 raise RuntimeError('Не задана обработка для типа массива:', c[2])
-        elif dt.lower() == 'user-defined':
+            dt = ARRAY_TYPE_MAP[c[2]]
+        elif dt.lower() == 'user-defined':  # кастомные типы данных
             dt = c[2]
 
         rebuild.append(tuple([c[0], dt]))
@@ -185,27 +187,26 @@ class Updater:
         # prepare data and arrange columns in accordance of DB,
         # columns missed in DB table will be removed from dataframe
         tuples = [tuple(x) for x in df[col_names].to_numpy()]
-
+        # TODO: поиск дублей
+        # uids = [str(t[0]) for t in tuples]
+        # for i in range(len(uids)):
+        #     for j in range(i + 1, len(uids)):
+        #         if uids[i] == uids[j]:
+        #             print(f'double: {uids[i]}')
         try:
             extras.execute_values(cursor, query, tuples)
         except (Exception, pg.DatabaseError) as e:
-            logging.error(f'Error by values execution: {e}\n'
+            logging.error(f'Ошибка при записи в БД: {e}\n'
                           f'query: {query}\n'
                           f'tuples[0] values: {tuples[0]}', exc_info=True)
+            # TODO: вывод дублирующих записей
+            # import re
+            # m = re.search('Key \\(uid\\)=\\((.+?)\\) already exists.', repr(e))
+            # if m:
+            #     found = m.group(1)
+            #     print(f'found: {found}: len = {len(found)}')
+            #     print('tuples:')
+            #     for t in tuples:
+            #         if str(t[0]) == found:
+            #             print(t)
             raise
-
-# цикл обновления всех таблиц по заданному клиенту
-# def run(self):
-
-# settings = self.settings
-# client_code = self.client['code']
-# self.db_schema = settings.get_current('db_schema')
-#
-# # отберём активные аккаунты клиента
-# accounts = settings.select('accounts', 'suspend', False)
-# wfs = Workflows(self.db_conn)
-# # по всем аккаунтам клиента
-# for _, account in accounts.iterrows():
-#     settings.set_current('account', account)
-#     wfs.setup(settings, self.upsert)
-#     wfs.run()
