@@ -21,8 +21,7 @@ TODO: что-то сделать с сообщением о входящих п�
 #    warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 
 
-SCHEMA = 'roentgen'
-CREDENTIALS = 'assets/credentials.json'
+CREDENTIALS = 'assets/credentials_vit.json'
 
 logger = Logger(__name__)
 
@@ -72,10 +71,10 @@ class DB:
         self.tunnel = None
         self.connection = None
         self.cursor = None
-        self.schema = SCHEMA
-        self.updater = Updater(self.schema)
         with open(CREDENTIALS, 'r') as fp:
             self.credentials = json.load(fp)
+        self.schema = self.credentials['PG_SCHEMA']
+        self.updater = Updater(self.schema)
 
     def set_tunnel(self):
         """Establishes SSH-tunnel"""
@@ -99,16 +98,22 @@ class DB:
 
     def connect(self):
         """Creates DB session"""
-        self.set_tunnel()
-        c = self.credentials
+        cr = self.credentials
+        if 'SSH_HOST' in cr:
+            self.set_tunnel()
+            host = cr['LOCALHOST']
+            port = self.tunnel.local_bind_port
+        else:
+            host = cr['DB_HOST']
+            port = cr['PORT']
 
         try:
             self.connection = pg.connect(
-                host=c['LOCALHOST'],
-                port=self.tunnel.local_bind_port,
-                user=c['PG_USERNAME'],
-                password=c['PG_DB_PW'],
-                database=c['PG_DB_NAME']
+                host=host,
+                port=port,
+                user=cr['PG_USERNAME'],
+                password=cr['PG_DB_PW'],
+                database=cr['PG_DB_NAME']
             )
             logger.debug('Соединение с БД установлено.')
 
