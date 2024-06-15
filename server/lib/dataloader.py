@@ -230,16 +230,9 @@ def generate_doctor_month_schedule(schedule_template, schedule_type, time_rate, 
         raise RuntimeError('Неизвестное обозначение вида графика:', schedule_type)
 
 
-def generate_schedule(doctors, month_layout, settings):
+def generate_schedule(doctors, month_layout):
 
-    output_format = settings['output_format']
-    random_schedule_type = settings['random_schedule_type']
-
-    assert output_format in ['example', 'bot'], f'Неизвестный выходной формат: {output_format}'
-    if output_format == 'example':
-        columns = ['uid', 'doctor', 'day_start', 'availability', 'time_volume']
-    elif output_format == 'bot':
-        columns = ['doctor_id', 'day_number', 'availability', 'time_volume']
+    columns = ['uid', 'doctor', 'day_start', 'availability', 'time_volume']
 
     month_start = month_layout['month_start']
     month_start_weekday= month_layout['month_start_weekday']
@@ -256,8 +249,8 @@ def generate_schedule(doctors, month_layout, settings):
         doctor_id = doctor['id']
         doctor_uid = doctor['uid']
         time_rate = doctor['time_rate']
-
-        schedule_type = gen.choice(SCHEDULE_TYPES) if random_schedule_type else doctor['schedule_type']
+        # schedule_type = gen.choice(SCHEDULE_TYPES) if random_schedule_type else doctor['schedule_type']
+        schedule_type = doctor['schedule_type']
 
         # случайный день начала выходных
         weekend_start = random.randint(0, 6)
@@ -282,18 +275,9 @@ def generate_schedule(doctors, month_layout, settings):
                 availability = -1 if gen.random() < 0.05 else 1
             else:
                 availability = 0
-            time_volume = timedelta(hours=month_schedule[day_number])
-            if output_format == 'example':
-                uid = uuid.uuid4()
-                item = [uid, doctor_uid, day_start, availability, time_volume]
-            elif output_format == 'bot':
-                item = [doctor_id, day_number, availability, time_volume]
-            time_table.append(item)
-        doctor_data.append([
-            # нормальная продолжительность рабочего дня в зависимости от вида графика
-            [8. * 3600 * time_rate, 12. * 3600 * time_rate][np.where(SCHEDULE_TYPES == schedule_type)[0][0]]
-        ])
-            # 'schedule_type': schedule_type
+            time_volume = timedelta(hours=month_schedule[day_number]) if availability > 0 else time(0)
+            uid = uuid.uuid4()
+            time_table.append([uid, doctor_uid, day_start, availability, time_volume])
 
     return pd.DataFrame(time_table, columns=columns), doctor_data
 
@@ -310,12 +294,8 @@ def load_doctor_availability(tablename, month_start, version):
         doctors: pd.DataFrame = get_all(cursor)
 
     month_layout = get_month_layout(month_start)
-    settings = {
-        'output_format': 'example',
-        'random_schedule_type': False
-    }
     # выход: [uid, doctor_uid, day_start, availability, time_volume]
-    df, _ = generate_schedule(doctors, month_layout, settings)
+    df, _ = generate_schedule(doctors, month_layout)
     df['version'] =  version
 
     unique = ['version', 'doctor', 'day_start']
@@ -396,36 +376,42 @@ def get_day_plan(version, month_start: datetime, with_ce=False):
     contrast_enhancement = 'p.contrast_enhancement,' if with_ce else ''
 
     query = f"""
-        SELECT
-            -- вычисляем дату от начала недели
-            '{month_start.strftime('%Y-%m-%d')}'::date - {start_weekday}
-            + row_number() over (
-                partition by {contrast_enhancement} p.modality 
-                order by p.week, d.weekday
-                )::integer as plan_date,
-            p.week,
-            d.weekday,
-            p.modality,
-            {contrast_enhancement}
-            sum(p.amount / 7.) as work_amount,
-            sum(p.amount / n.max_value * 8 / 7) as time_volume
-        FROM "roentgen".work_plan_summary as p
-        LEFT JOIN "roentgen".time_norm as n
-            ON n.modality = p.modality AND n.contrast_enhancement = p.contrast_enhancement
-        FULL JOIN (VALUES (1), (2), (3), (4), (5), (6), (7)) as d(weekday)
-            ON true
-        WHERE
-            p.version = '{version}' and year = {year} 
-            and p.week >= {month_start_week} and p.week <= {month_end_week}
-        GROUP BY
-            p.modality,
-            {contrast_enhancement}        
-            d.weekday,
-            p.week
-        ORDER BY
-            p.week,
-            d.weekday
-            
+        WITH raw_plan as (
+            SELECT
+                -- вычисляем дату от начала недели
+                '{month_start.strftime('%Y-%m-%d')}'::date - {start_weekday}
+                + row_number() over (
+                    partition by {contrast_enhancement} p.modality 
+                    order by p.week, d.weekday
+                    )::integer as plan_date,
+                p.week,
+                d.weekday,
+                p.modality,
+                {contrast_enhancement}
+                sum(p.amount / 7.) as work_amount,
+                sum(p.amount / n.max_value * 8 / 7) as time_volume
+            FROM "roentgen".work_plan_summary as p
+            LEFT JOIN "roentgen".time_norm as n
+                ON n.modality = p.modality AND n.contrast_enhancement = p.contrast_enhancement
+            FULL JOIN (VALUES (1), (2), (3), (4), (5), (6), (7)) as d(weekday)
+                ON true
+            WHERE
+                p.version = '{version}' and year = {year} 
+                and p.week >= {month_start_week} and p.week <= {month_end_week}
+            GROUP BY
+                p.modality,
+                {contrast_enhancement}        
+                d.weekday,
+                p.week
+            ORDER BY
+                p.week,
+                d.weekday
+        )
+        SELECT *,
+            extract(month from plan_date) as month,
+            extract(day from plan_date) as day_number,
+            extract(day from plan_date) - 1 as day_index
+        FROM raw_plan;
     """
     db = DB()
     with db.get_cursor() as cursor:
@@ -441,8 +427,10 @@ def get_schedule(version, month_start, data_layer):
         query = f"""
             -- расписание по врачам на месяц по дням
             SELECT
+                d.id as doctor_id,
                 d.name,
                 date_trunc('day', da.day_start) as day,
+                extract(day from da.day_start) - 1 as day_index,
                 da.availability,
                 da.time_volume
             FROM "roentgen".doctor_availability as da
@@ -451,6 +439,9 @@ def get_schedule(version, month_start, data_layer):
             WHERE
                 da.version = '{version}' 
                 and date_trunc('month', da.day_start) = '{month_start.strftime('%Y-%m-%d')}'::date
+            ORDER BY
+                d.id,
+                extract(day from da.day_start)
             ;
         """
     elif data_layer == 'day_modality':
@@ -529,7 +520,7 @@ if __name__ == '__main__':
     # load_doctor('doctor', 'Пример табеля.xlsx', 'for_load')
     # генерация таблицы доступности врачей
     start_of_month = datetime(2024, 1, 1)
-    # load_doctor_availability('doctor_availability', start_of_month, version='base')
+    load_doctor_availability('doctor_availability', start_of_month, version='base')
     # генерация записей по работе врача в течение дня
     # load_doctor_day_plan('doctor_day_plan', start_of_month, version='base')
 
