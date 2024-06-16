@@ -1,0 +1,10 @@
+// require('@lottiefiles/lottie-player')
+import '../sass/styles.sass'
+import './blocks/search'
+import './blocks/record-form'
+import './blocks/masks'
+import './blocks/modal'
+import './blocks/doctors-detail-card'
+import './blocks/doctors-card'
+import './blocks/tabs'
+import './blocks/preloader'
