@@ -1,0 +1,22 @@
+<?
+if($INCLUDE_FROM_CACHE!='Y')return false;
+$datecreate = '001718570583';
+$dateexpire = '001718574183';
+$ser_content = 'a:2:{s:7:"CONTENT";s:0:"";s:4:"VARS";a:2:{s:8:"arResult";a:5:{i:0;a:10:{s:4:"TEXT";s:14:"Прогноз";s:4:"LINK";s:1:"/";s:8:"SELECTED";b:0;s:10:"PERMISSION";s:1:"X";s:16:"ADDITIONAL_LINKS";a:0:{}s:9:"ITEM_TYPE";s:1:"D";s:10:"ITEM_INDEX";i:0;s:6:"PARAMS";a:1:{s:4:"ICON";s:1602:"<svg xmlns="http://www.w3.org/2000/svg" opacity="0.5" width="24" height="25" viewBox="0 0 24 25" fill="none">
+    <path d="M3.75 21.9113C4.99264 21.9113 6 20.9039 6 19.6613C6 18.4186 4.99264 17.4113 3.75 17.4113C2.50736 17.4113 1.5 18.4186 1.5 19.6613C1.5 20.9039 2.50736 21.9113 3.75 21.9113Z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M9 12.1613C10.2426 12.1613 11.25 11.1539 11.25 9.91125C11.25 8.66861 10.2426 7.66125 9 7.66125C7.75736 7.66125 6.75 8.66861 6.75 9.91125C6.75 11.1539 7.75736 12.1613 9 12.1613Z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M15 18.1613C16.2426 18.1613 17.25 17.1539 17.25 15.9113C17.25 14.6686 16.2426 13.6613 15 13.6613C13.7574 13.6613 12.75 14.6686 12.75 15.9113C12.75 17.1539 13.7574 18.1613 15 18.1613Z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M20.25 8.41125C21.4926 8.41125 22.5 7.4039 22.5 6.16125C22.5 4.91861 21.4926 3.91125 20.25 3.91125C19.0074 3.91125 18 4.91861 18 6.16125C18 7.4039 19.0074 8.41125 20.25 8.41125Z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.93123 11.8894L4.81873 17.6831" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M13.4062 14.3175L10.5938 11.505" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M19.1812 8.13937L16.0687 13.9331" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>";}s:11:"DEPTH_LEVEL";i:1;s:9:"IS_PARENT";b:0;}i:1;a:10:{s:4:"TEXT";s:12:"График";s:4:"LINK";s:7:"/graph/";s:8:"SELECTED";b:0;s:10:"PERMISSION";s:1:"X";s:16:"ADDITIONAL_LINKS";a:0:{}s:9:"ITEM_TYPE";s:1:"D";s:10:"ITEM_INDEX";i:1;s:6:"PARAMS";a:1:{s:4:"ICON";s:542:"<svg xmlns="http://www.w3.org/2000/svg" opacity="0.5" width="24" height="25" viewBox="0 0 24 25" fill="none">
+    <path d="M3.00002 12.1113H21M3.00002 12.1113L3.00002 20.1113C3.00002 21.1054 3.80591 21.9113 4.80002 21.9113H19.2C20.1941 21.9113 21 21.1054 21 20.1113V12.1113M3.00002 12.1113L3 8.21125C3 7.21714 3.80589 6.41125 4.8 6.41125H19.2C20.1941 6.41125 21 7.21714 21 8.21125L21 12.1113M17.4 4.91125V6.41125M12 4.91125V6.41125M6.6 4.91125V6.41125" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>";}s:11:"DEPTH_LEVEL";i:1;s:9:"IS_PARENT";b:0;}i:2;a:10:{s:4:"TEXT";s:10:"Врачи";s:4:"LINK";s:9:"/doctors/";s:8:"SELECTED";b:0;s:10:"PERMISSION";s:1:"X";s:16:"ADDITIONAL_LINKS";a:0:{}s:9:"ITEM_TYPE";s:1:"D";s:10:"ITEM_INDEX";i:2;s:6:"PARAMS";a:1:{s:4:"ICON";s:1257:"<svg xmlns="http://www.w3.org/2000/svg" opacity="0.5" width="24" height="25" viewBox="0 0 24 25" fill="none">
+    <path d="M8.25 15.9113C10.9424 15.9113 13.125 13.7286 13.125 11.0363C13.125 8.34387 10.9424 6.16125 8.25 6.16125C5.55761 6.16125 3.375 8.34387 3.375 11.0363C3.375 13.7286 5.55761 15.9113 8.25 15.9113Z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M14.5687 6.33938C14.9997 6.2225 15.4441 6.16261 15.8906 6.16125C17.1835 6.16125 18.4235 6.67487 19.3377 7.58911C20.252 8.50335 20.7656 9.74332 20.7656 11.0363C20.7656 12.3292 20.252 13.5692 19.3377 14.4834C18.4235 15.3976 17.1835 15.9113 15.8906 15.9113" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M1.5 19.4175C2.2612 18.3343 3.27191 17.4502 4.44676 16.8399C5.6216 16.2295 6.92608 15.9109 8.25 15.9109C9.57392 15.9109 10.8784 16.2295 12.0532 16.8399C13.2281 17.4502 14.2388 18.3343 15 19.4175" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M15.8906 15.9113C17.2147 15.9104 18.5194 16.2287 19.6944 16.839C20.8693 17.4493 21.8799 18.3338 22.6406 19.4175" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>";}s:11:"DEPTH_LEVEL";i:1;s:9:"IS_PARENT";b:0;}s:7:"menuDir";s:1:"/";s:8:"menuType";s:7:"sidebar";}s:18:"templateCachedData";a:0:{}}}';
+return true;
+?>

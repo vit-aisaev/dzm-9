@@ -1,5 +1,10 @@
 {$SERVER_NAME:localhost} {
 	root * /var/www/html
-	php_fastcgi php:9000
+	php_fastcgi php:9000 {
+		try_files {path} {path}/index.php =404
+	}
+	handle_errors {
+		respond "{err.status_code} {err.status_text}"
+	}
 	file_server
 }

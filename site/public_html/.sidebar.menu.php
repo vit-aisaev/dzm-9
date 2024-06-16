@@ -3,7 +3,7 @@
 $aMenuLinks = [
     [
         'Прогноз',
-        SITE_DIR.'about/',
+        SITE_DIR.'',
         [],
         ['ICON' => file_get_contents($_SERVER['DOCUMENT_ROOT'].SITE_TEMPLATE_PATH.'/assets/img/sidebar/graph.svg')],
         ''
@@ -22,11 +22,11 @@ $aMenuLinks = [
         ['ICON' => file_get_contents($_SERVER['DOCUMENT_ROOT'].SITE_TEMPLATE_PATH.'/assets/img/sidebar/doctors.svg')],
         ''
     ],
-    [
-        'Табель',
-        SITE_DIR.'patient/',
-        [],
-        ['ICON' => file_get_contents($_SERVER['DOCUMENT_ROOT'].SITE_TEMPLATE_PATH.'/assets/img/sidebar/table.svg')],
-        ''
-    ],
+    // [
+    //     'Табель',
+    //     SITE_DIR.'#',
+    //     [],
+    //     ['ICON' => file_get_contents($_SERVER['DOCUMENT_ROOT'].SITE_TEMPLATE_PATH.'/assets/img/sidebar/table.svg')],
+    //     ''
+    // ],
 ];

@@ -3,7 +3,7 @@ services:
     image: caddy:2.8
     restart: always
     environment:
-      SERVER_NAME: dzm-9.webtm.ru:80
+      SERVER_NAME: :80
     ports:
       - 80:80
       - 443:443
@@ -18,7 +18,7 @@ services:
     volumes:
       - ./site/public_html:/var/www/html
     user: ${UID}:${GID}
-  db:
+  db1:
     image: mysql:5.7
     restart: always
     environment:
@@ -29,10 +29,21 @@ services:
       MYSQL_USER: "user"
       MYSQL_PASSWORD: "z5NxW9VP"
     volumes:
-      - db_data:/var/lib/mysql
+      # - db_data1:/var/lib/mysql
+      - ./db_data1:/var/lib/mysql
     user: ${UID}:${GID}
+  # db:
+  #   image: postgres:16
+  #   restart: always
+  #   environment:
+  #     POSTGRES_DB: "db"
+  #     POSTGRES_USER: "user"
+  #     POSTGRES_PASSWORD: "z5NxW9VP"
+  #   volumes:
+  #     - db_data:/var/lib/postgresql/data
 
 volumes:
   caddy_data:
   caddy_config:
   db_data:
+  db_data1:

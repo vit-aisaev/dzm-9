@@ -1,0 +1,125 @@
+2024-Jun-16 16:29:27 Наличие необходимых модулей php (check_php_modules): Ok
+Все необходимые модули установлены
+2024-Jun-16 16:29:27 Обязательные параметры PHP (check_php_settings): Ok
+Настройки правильные
+2024-Jun-16 16:29:27 Модули веб-сервера (check_security): Ok
+Конфликтов не выявлено
+2024-Jun-16 16:29:27 Значения переменных сервера (check_server_vars): Ok
+Корректные
+2024-Jun-16 16:29:27 Сохранение сессии (check_session): Ok
+50% done
+2024-Jun-16 16:29:27 Сохранение сессии (check_session): Ok
+Успешно
+2024-Jun-16 16:29:27 Параметры настройки UTF (mbstring и константа BX_UTF) (check_mbstring): Ok
+Правильные. Сайт работает в UTF кодировке
+2024-Jun-16 16:29:28 Служебные скрипты в корне сайта (check_install_scripts): Ok
+Отсутствуют
+2024-Jun-16 16:29:28 Работа с сокетами (check_socket): Ok
+Connection to dzm-9.webtm.ru:80	Success
+
+Успешно
+2024-Jun-16 16:29:28 Выполнение агентов на cron (check_bx_crontab): Warning
+Замечание. Агенты выполняются на хитах, рекомендуется перевести выполнение агентов на cron
+2024-Jun-16 16:29:28 Параметры подключения к базе данных (check_dbconn_settings): Ok
+Успешно
+2024-Jun-16 16:29:28 Лишний вывод в файлах конфигурации (check_dbconn): Ok
+Connection to dzm-9.webtm.ru:80	Success
+
+Успешно
+2024-Jun-16 16:29:28 Сохранение сессии без UserAgent (check_session_ua): Ok
+50% done
+Connection to dzm-9.webtm.ru:80	Success
+
+2024-Jun-16 16:29:28 Сохранение сессии без UserAgent (check_session_ua): Ok
+Connection to dzm-9.webtm.ru:80	Success
+
+Успешно
+2024-Jun-16 16:29:28 Настройки сайтов (check_sites): Ok
+Правильные
+2024-Jun-16 16:29:28 Размер стека и pcre.recursion_limit (check_pcre_recursion): Ok
+Connection to dzm-9.webtm.ru:80	Success
+
+Успешно
+2024-Jun-16 16:29:28 Загрузка файла (check_upload): Ok
+Connection to dzm-9.webtm.ru:80	Success
+
+Успешно
+2024-Jun-16 16:29:28 Загрузка файла больше 4Мб (check_upload_big): Fail
+Connection to dzm-9.webtm.ru:80	Success
+== Request ==
+POST /bitrix/admin/site_checker.php?test_type=upload_test&unique_id=3facd10eb2003e31102281a4cd977faf&big=1&raw=0 HTTP/1.1
+Host: dzm-9.webtm.ru
+Content-Type: multipart/form-data; boundary=--------2e2aa75fa54dca0d10153f046cfd245c
+Content-Length: 4200195
+
+----------2e2aa75fa54dca0d10153f046cfd245c
+Content-Disposition: form-data; name="test_file"; filename="site_checker.bin
+Content-Type: image/gif
+
+()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~����������������������������������������������������������������������������������������������������������������()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~����������������������������������������������������������������������������������������������������������������()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~��������������������������������������������������������������������������������������������������������� ... (4200453 bytes)
+== Response ==
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Server: Caddy
+X-Powered-By: PHP/8.1.29
+Date: Sun, 16 Jun 2024 13:29:28 GMT
+Content-Length: 316
+
+== Body ==
+move_uploaded_file(,/var/www/html/bitrix/tmp/site_checker.bin)=false
+$_FILES=
+Array
+(
+    [test_file] => Array
+        (
+            [name] => site_checker.bin
+            [full_path] => site_checker.bin
+            [type] => 
+            [tmp_name] => 
+            [error] => 1
+            [size] => 0
+        )
+
+)
+
+==========
+
+Ошибка! Не работает
+2024-Jun-16 16:29:28 Загрузка файла через php://input (check_upload_raw): Ok
+Connection to dzm-9.webtm.ru:80	Success
+
+Успешно
+2024-Jun-16 16:29:28 Передача POST запроса с большим числом параметров (check_post): Ok
+Connection to dzm-9.webtm.ru:80	Success
+
+Успешно
+2024-Jun-16 16:29:28 Отправка почты (check_mail): Fail
+Ошибка! Не работает
+2024-Jun-16 16:29:28 Отправка почтового сообщения больше 64Кб (check_mail_big): Fail
+Ошибка! Не работает
+2024-Jun-16 16:29:29 Проверка на наличие неотправленных сообщений (check_mail_b_event): Ok
+Успешно
+2024-Jun-16 16:29:29 Внутреннее перенаправление (функция LocalRedirect) (check_localredirect): Ok
+50% done
+Connection to dzm-9.webtm.ru:80	Success
+
+2024-Jun-16 16:29:29 Внутреннее перенаправление (функция LocalRedirect) (check_localredirect): Ok
+Connection to dzm-9.webtm.ru:80	Success
+
+Успешно
+2024-Jun-16 16:29:29 Фактическое ограничение памяти (check_memory_limit): Ok
+20% done
+Connection to dzm-9.webtm.ru:80	Success
+
+2024-Jun-16 16:29:29 Фактическое ограничение памяти (check_memory_limit): Ok
+40% done
+Connection to dzm-9.webtm.ru:80	Success
+
+2024-Jun-16 16:29:29 Фактическое ограничение памяти (check_memory_limit): Ok
+60% done
+Connection to dzm-9.webtm.ru:80	Success
+
+2024-Jun-16 16:29:30 Фактическое ограничение памяти (check_memory_limit): Ok
+80% done
+Connection to dzm-9.webtm.ru:80	Success
+

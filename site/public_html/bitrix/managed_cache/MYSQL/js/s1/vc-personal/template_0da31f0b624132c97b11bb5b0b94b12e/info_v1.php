@@ -1,0 +1,1 @@
+<?php $filesInfo = ["/local/templates/vc-personal/assets/js/app.js" => "1718549639475206",]; ?>

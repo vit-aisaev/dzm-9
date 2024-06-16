@@ -8,6 +8,7 @@ RUN set -eux; \
         zip \
         gd \
         mysqli \
+        pdo_pgsql \
         @composer \
     ;
 

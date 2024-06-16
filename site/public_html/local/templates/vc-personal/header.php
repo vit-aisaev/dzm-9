@@ -44,7 +44,7 @@ use Bitrix\Main\Page\Asset;
         <main class="vc-main">
             <div class="vc-sidebar">
                 <div class="vc-sidebar__header">
-                    <img src="frontend/src/img/sidebar/sidebar-logo.png" class="vc-sidebar__logo" alt="">
+                    <img src="<?= SITE_TEMPLATE_PATH.'/assets/img/sidebar/sidebar-logo.png'; ?>" class="vc-sidebar__logo" alt="">
                 </div>
                 <?php $APPLICATION->IncludeComponent('bitrix:menu', 'vc-sidebar', [
                     'ALLOW_MULTI_SELECT' => 'N',
