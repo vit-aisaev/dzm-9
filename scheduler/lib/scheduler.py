@@ -488,6 +488,13 @@ class Scheduler:
                     """что-то не так с contiguous - создаётся новый объект"""
                     return bot.transpose((0, 2, 1)).reshape((-1, len(MODALITIES)))
 
+                def turn_back(transposed, original):
+                    """Возврат бота к первоначальной форме"""
+                    shape = original.shape
+                    return transposed \
+                        .reshape(shape[0], shape[2], shape[1]) \
+                        .transpose((0, 2, 1))
+
                 def swith_modalities(transposed, mod_index, new_index):
                     keeper = transposed[np.arange(v_len), new_index].copy()
                     transposed[np.arange(v_len), new_index] = transposed[np.arange(v_len), mod_index]
@@ -502,7 +509,7 @@ class Scheduler:
                 # print(f'transposed1:\n{transposed1}')
                 gc.collect()
 
-                return transposed0, transposed1
+                return turn_back(transposed0, bot0), turn_back(transposed1, bot1)
 
             def mate_pair(src_bot, new_bot):
                 """
@@ -592,7 +599,7 @@ class Scheduler:
             container = self.select(next_container)
             gc.collect()
 
-        # пишем лучшего в базу
+        # пишем лучшего бота в базу
         # TODO: нужно также сохранять доступность и норму времени (длительность рабочего дня) - ок
         best_bots, avails, _, _ = container.get([0])
         self.save_bot(best_bots[0], avails[0])
@@ -732,17 +739,17 @@ if __name__ == '__main__':
                         formatter=dict(float=lambda x: f'{x:.5f}'))
     month_start = datetime(2024, 1, 1)
 
-    test = Test(month_start)
-    test.run()
+    # test = Test(month_start)
+    # test.run()
 
-    # scheduler = Scheduler(
-    #     month_start,
-    #     plan_version='validation',
-    #     n_generations=2,
-    #     population_size=3,
-    #     n_survived=2,
-    # )
-    # scheduler.run()
+    scheduler = Scheduler(
+        month_start,
+        plan_version='validation',
+        n_generations=2,
+        population_size=3,
+        n_survived=2,
+    )
+    scheduler.run()
 
     # schedule = get_schedule('base', month_start, data_layer='day')
     # schedule = get_schedule('base', month_start, data_layer='day_modality')
