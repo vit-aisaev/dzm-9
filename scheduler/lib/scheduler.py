@@ -3,6 +3,7 @@ import uuid
 import numpy as np
 
 import os
+import gc
 from datetime import datetime, timedelta
 import calendar
 import pandas as pd
@@ -77,6 +78,47 @@ def generate_bot(doctors, month_layout, base_schedule):
     return pd.DataFrame(time_table, columns=columns), doctor_data
 
 
+class Container:
+    """Класс для согласованного хранения расписаний и связанных данных"""
+    def __init__(self):
+        self.bots = None
+        self.avails = None
+        self.doctors = None
+        self.scores = None
+
+    def keep(self, bots, avails, doctors):
+        self.bots = bots
+        self.avails = avails
+        self.doctors = doctors
+
+    def get(self, indices=None, copy=False):
+        if indices is None:
+            return self.bots, self.avails, self.doctors, self.scores
+        elif copy:
+            return self.bots[indices], self.avails[indices], self.doctors[indices], self.scores
+        else:
+            return self.bots[indices].copy(), self.avails[indices].copy(), \
+                   self.doctors[indices].copy(), self.scores[indices].copy()
+
+    def get_scores(self):
+        return self.scores
+
+    def set_scores(self, scores):
+        self.scores = scores
+
+    def append(self, bots, avails, doctors):
+        # bots, avails, doctors, scores = container.get()
+        self.bots = np.vstack([self.bots, bots])
+        self.avails = np.vstack([self.avails, avails])
+        self.doctors = np.vstack([self.doctors, doctors])
+        # self.scores = np.vstack([self.scores, scores])
+
+    def print_shapes(self):
+        print(f'bots: {self.bots.shape}')
+        print(f'avails: {self.avails.shape}')
+        print(f'doctors: {self.doctors.shape}')
+
+
 class Scheduler:
 
     """
@@ -121,7 +163,7 @@ class Scheduler:
             mod_list.append(mod)
 
         doctors.apply(set_mod, axis=1)
-        v_mod = np.expand_dims(np.array(mod_list),axis=(0, -1))
+        v_mod = np.array(mod_list)[np.newaxis, :, :, np.newaxis]
         print(f'v_mod: {v_mod.shape}')
         # print(v_mod[:5])
         self.v_mod = v_mod
@@ -213,31 +255,35 @@ class Scheduler:
             avail_list.append(avail_df.to_numpy(dtype=np.float32, copy=True))
             # print(avail_df.head())
 
-        return (
+        container = Container()
+        container.keep(
             np.array(bot_list),
             np.array(avail_list),
             v_doctor
         )
+        return container
 
-    def evaluate(self):
+    def evaluate(self, container: Container):
 
         time_pw = -10  # степень функции для оценки нормы рабочего времени в рамках дня
         extra_mod_k = 0.9  # снижение оценки за работы не по основной модальности
         fact_over_plan_pw = -2  # степень затухания оценки при превышении факта над планом
 
+        v_bot, _, v_doctor,_ = container.get()
+
         np.set_printoptions(formatter=dict(float=lambda x: f'{x:.3f}'))
         # TODO: debug
-        self.v_bot[0, 0, 0, 0:5] = 20000.
-        self.v_bot[0, 0, 0, 6:8] = 1000.
-        self.v_bot[0, 0, 2, 0:5] = 10000.
-        self.v_bot[0, 2, 0, 3:5] = 50000.
-        self.v_bot[0, 2, 1, 3:5] = 10000.
+        # v_bot[0, 0, 0, 0:5] = 20000.
+        # v_bot[0, 0, 0, 6:8] = 1000.
+        # v_bot[0, 0, 2, 0:5] = 10000.
+        # v_bot[0, 2, 0, 3:5] = 50000.
+        # v_bot[0, 2, 1, 3:5] = 10000.
 
         f_mod = self.v_mod > 0
         f_extra_mod = self.v_mod == 1  # 1 - дополнительная модальность, 2 - основная
-        f_noworks = np.isclose(self.v_bot, 0.)
+        f_noworks = np.isclose(v_bot, 0.)
         # 0 - норма времени (сек.) согласно виду графика и ставке
-        f_day_time_norm = self.v_doctor[:, :, 0, np.newaxis, np.newaxis]
+        f_day_time_norm = v_doctor[:, :, 0, np.newaxis, np.newaxis]
         print(f'f_day_time_norm: {f_day_time_norm.shape}')
         # print(f'f_day_time_norm:\n{f_day_time_norm[0, :3, 0, 0]}')
 
@@ -260,23 +306,23 @@ class Scheduler:
             # линейная функция, равная 0 в нуле и 1 в значении нормы времени
             return value / normal
 
-        v_score = np.zeros(self.v_bot.shape)
+        v_score = np.zeros(v_bot.shape)
         # *
         # оценка отдельного рабочего дня врача в рамках модальности:
 
         # если работ нет - ставим 1
         # TODO: возможно, следует занулить
-        v_score[f_noworks & f_mod] = 1.
+        v_score[f_noworks & f_mod] = 0.
         # есть работы по своим модальностям
         f_work_frame = ~f_noworks & f_mod
         print(f'f_work_frame: {f_work_frame.shape}')
         # отбираем работы со временем меньше нормативного
-        f_in_norm = self.v_bot <= f_day_time_norm
+        f_in_norm = v_bot <= f_day_time_norm
         # оценку 1 получают работы по модальности не превышающие нормативное время
         v_score[f_work_frame & f_in_norm] = 1.
         # работы по модальности со временем больше нормативного получают убывающую оценку
         v_score[f_work_frame & ~f_in_norm] = power_norm_and_more(
-            self.v_bot, f_day_time_norm, time_pw)[f_work_frame & ~f_in_norm]
+            v_bot, f_day_time_norm, time_pw)[f_work_frame & ~f_in_norm]
         print(f'v_score: {v_score.shape}')
 
         # немного снижаем оценку за работы по дополнительной модальности
@@ -317,13 +363,13 @@ class Scheduler:
         # добавляем оценку выполнения плана
         # оценка линейно растёт при приближении факта к плану
         # и убывает при перевыполнении
-        day_fact = np.sum(self.v_bot, axis=1, keepdims=True)
+        day_fact = np.sum(v_bot, axis=1, keepdims=True)
         print(f'day_fact: {day_fact.shape}')
         in_plan = day_fact <= self.v_plan
         print(f'in_plan: {in_plan.shape}')
         multiplier = np.ones(in_plan.shape)
 
-        td = 3
+        # td = 3
         # print(f':: day_fact: {day_fact[0, 0, 0, td]}')
         # print(f':: self.v_plan: {self.v_plan[0, 0, 0, td]}')
         # print(f':: power_norm_and_more: {power_norm_and_more(day_fact[0, 0, 0, td], self.v_plan[0, 0, 0, td], fact_over_plan_pw)}')
@@ -336,6 +382,7 @@ class Scheduler:
         print(f'multiplier:\n{multiplier[0, 0, :, :10]}')
         v_score *= multiplier
         # итоговая оценка
+        # TODO: настроить
         bot_scores = v_score.sum(axis=(1, 2, 3))
         print('total_score:', bot_scores)
 
@@ -348,11 +395,17 @@ class Scheduler:
         #                 print(f'bot: {b}, mod: {m}, day: {day}')
         return bot_scores
 
-    def select(self, bot_scores):
+    def select(self, container: Container) -> Container:
+        bot_scores = container.get_scores()
         best_indices = bot_scores.argsort()[-self.n_survived:]
-        best_bots = self.v_bot[best_indices].copy()
-        print(f'best_bots: {best_bots.shape}')
-        return best_bots
+        best_bots, avails, doctors, scores = container.get(best_indices, copy=True)
+        # кладём лучших ботов в другой контейнер
+        selected = Container()
+        selected.keep(best_bots, avails, doctors)
+        selected.set_scores(scores)
+        container = None
+        gc.collect()
+        return selected
 
     def mate(self, bots):
         assert self.n_survived % 2 == 0
@@ -363,41 +416,125 @@ class Scheduler:
         # определяем, кто с кем будет скрещиватья
         mate_indices = np.arange(n_best_bots)
         gen.shuffle(mate_indices)
+        print(f'mate_indices:\n{mate_indices}')
 
         # *
         # получаем вектор случайного скрещивания для всех пар родителей
-        v_mate = np.zeros((self.n_survived // 2, bots.shape[1]), dtype=np.int32)
-        print(f'v_mate: {v_mate.shape}')
+        v_mate_len = self.n_survived // 2
+        v_mate = np.zeros((v_mate_len, bots.shape[1], bots.shape[3]), dtype=np.int32)
+
         # добавляем случайные индексы второго родителя
+        v_mate.shape = (v_mate_len, -1)
         for i in range(v_mate.shape[0]):
             indices = np.unique(gen.integers(0, v_mate.shape[1], size=v_mate.shape[1] // 2))
             v_mate[i][indices] = 1
+        v_mate.shape = (v_mate_len, bots.shape[1], bots.shape[3])
         new_bots = None
+        print(f'v_mate {v_mate.shape}:\n{v_mate}')
 
-        # помечаем запрещённые пересечения
+        # производим мутацию
         for i in range(0, len(mate_indices), 2):
             mate_index = i // 2
             b0, b1 = bots[i], bots[i + 1]
             new_bot0, new_bot1 = b0.copy(), b1.copy()
             # print(f'f1: {f1.shape}')
 
+            def change_modalities(bot0, bot1):
+                """
+                Переставляет работы по модальности у двух ботов.
+                Для перестановки берётся модальность с максимальным объёмом работ.
+                """
+                # print('change_modalities bot0:\n', bot0)
+                # print('change_modalities bot1:\n', bot1)
+                mod_index0 = bot0.argmax(axis=1)
+                mod_index1 = bot1.argmax(axis=1)
+                new_index0 = mod_index0.copy()
+                new_index1 = mod_index1.copy()
+
+                mask = np.ones(mod_index0.shape, dtype=np.bool_)
+                # TODO: ? возможно стоит обмениваться там, где есть работы
+                # группируем работы бота-источника по врачам, модальностям
+                # зануляем в маске работы, которых нет у бота источника
+                # (?) умножаем на матрицу модальностей врачей
+                # mask = mask & np.isclose(src_bot.sum(axis=2) * self.v_mod[0, :, :, 0], 0.)[:, :, np.newaxis]
+
+                n_mods = len(MODALITIES)
+                v_mod = self.v_mod[0, :, :, :]
+                v_mod = np.repeat(v_mod, bot0.shape[2], axis=-1).transpose((0, 2, 1))
+                v_mod = v_mod.reshape((-1, n_mods))
+                mod_allowed = v_mod[np.arange(v_mod.shape[0]), mod_index0.reshape(-1,)]
+                mod_allowed.shape = mod_index0.shape
+                print(f'mod_allowed {mod_allowed.shape}:\n{mod_allowed}')
+
+                # оставляем модальности согласно вектору случайного скрещивания
+                mask = mask & v_mate[mate_index] == 1
+                print(f'mask:\n{mask}')
+                # обмен индексами
+                new_index0[mask] = mod_index1[mask]
+                new_index1[mask] = mod_index0[mask]
+                # перезапись модальнойстей ботов
+                print(f'mod_index0:\n{mod_index0}')
+                print(f'new_index0:\n{new_index0}')
+                print(f'mod_index1:\n{mod_index1}')
+                print(f'new_index1:\n{new_index1}')
+                mod_index0.shape = (-1,)
+                mod_index1.shape = (-1,)
+                new_index0.shape = (-1,)
+                new_index1.shape = (-1,)
+
+                v_len = new_index0.shape[0]
+
+                def prepare_for_advanced_indexing(bot):
+                    """что-то не так с contiguous - создаётся новый объект"""
+                    return bot.transpose((0, 2, 1)).reshape((-1, len(MODALITIES)))
+
+                def turn_back(transposed, original):
+                    """Возврат бота к первоначальной форме"""
+                    shape = original.shape
+                    return transposed \
+                        .reshape(shape[0], shape[2], shape[1]) \
+                        .transpose((0, 2, 1))
+
+                def swith_modalities(transposed, mod_index, new_index):
+                    keeper = transposed[np.arange(v_len), new_index].copy()
+                    transposed[np.arange(v_len), new_index] = transposed[np.arange(v_len), mod_index]
+                    transposed[np.arange(v_len), mod_index] = keeper
+
+                transposed0 = prepare_for_advanced_indexing(bot0)
+                transposed1 = prepare_for_advanced_indexing(bot1)
+
+                swith_modalities(transposed0, mod_index0, new_index0)
+                swith_modalities(transposed1, mod_index1, new_index1)
+                # print(f'transposed0:\n{transposed0}')
+                # print(f'transposed1:\n{transposed1}')
+                gc.collect()
+
+                return turn_back(transposed0, bot0), turn_back(transposed1, bot1)
+
             def mate_pair(src_bot, new_bot):
                 """
                 возьмём из соседнего бота работы только по тем модальностям, которые есть
                 в модальностях принимающего бота
-                группируем работы по врачам, модальностям и умножаем на матрицу модальностей врачей
                 :param src_bot:
                 :param new_bot:
                 """
+                # изначально разрешён полный перенос
                 mask = np.ones(src_bot.shape, dtype=np.bool_)
+                # группируем работы бота-источника по врачам, модальностям
+                # зануляем в маске работы, которых нет у бота источника
+                # (?) умножаем на матрицу модальностей врачей
                 mask = mask & np.isclose(src_bot.sum(axis=2) * self.v_mod[0, :, :, 0], 0.)[:, :, np.newaxis]
+                # оставляем работы согласно вектору случайного скрещивания
                 mask = mask & v_mate[mate_index][:, np.newaxis, np.newaxis] == 1
-                new_bot[mask] = src_bot[mask]
 
-                # TODO: боты должны обмениваться модальностями, но не объёмами работ
+                # new_bot[mask] = src_bot[mask]
 
-            mate_pair(b1, new_bot0)
-            mate_pair(b0, new_bot1)
+            # mate_pair(b1, new_bot0)
+            # mate_pair(b0, new_bot1)
+            new_bot0, new_bot1 = change_modalities(new_bot0, new_bot1)
+            print(f'new_bot0:\n{new_bot0}')
+            print(f'new_bot1:\n{new_bot1}')
+            gc.collect()
 
             print(f'b0 / new_bot0 sum: {b0.sum()} / {new_bot0.sum()}')
             print(f'b1 / new_bot1 sum: {b1.sum()} / {new_bot1.sum()}')
@@ -412,9 +549,8 @@ class Scheduler:
                 new_bots = np.vstack([new_bots, new_pair])
 
             print(f'mate_indices:\n{mate_indices[i:i + 2]}')
-            print(f'v_mate:\n{v_mate[0, :10]}')
-            print(f'new_pair[0]:\n{new_pair[0][0, :10]}')
-            print(f'new_pair[1]:\n{new_pair[1][0, :10]}')
+            # print(f'new_pair[0]:\n{new_pair[0][0, :10]}')
+            # print(f'new_pair[1]:\n{new_pair[1][0, :10]}')
 
         # print(f'v_mod:\n{self.v_mod[0, :3]}')
         print(f'new_bots: {new_bots.shape}')
@@ -426,19 +562,51 @@ class Scheduler:
 
     def run(self):
 
-        self.v_bot, self.v_avail, self.v_doctor = self.initialize(
-            n_bots=self.population_size
-        )
-        print(f'v_bot: {self.v_bot.shape}')
-        print(f'v_avail: {self.v_avail.shape}')
-        print(f'v_doctor: {self.v_doctor.shape}')
-        # вычисляем оценку ботов
-        bot_scores = self.evaluate()
-        # производим отбор
-        # TODO: нужно также сохранять доступность и норму времени (длительность рабочего дня)
-        best_bots = self.select(bot_scores)
+        container = self.initialize(n_bots=self.population_size)
+        container.print_shapes()
 
-        # пишем лучшего в базу
+        # вычисляем оценку ботов
+        bot_scores = self.evaluate(container)
+        container.set_scores(bot_scores)
+
+        # производим отбор
+        container = self.select(container)
+        gc.collect()
+
+        for generation in range(self.n_generations - 1):
+            # print(f'Поколение #{generation}')
+            # скрещиваем ботов
+            bots, avails, doctors, scores = container.get()
+            new_bots = self.mate(bots)
+            # производим мутацию
+            new_bots = self.mutate(new_bots)
+
+            # добавляем случайных ботов
+            next_container = self.initialize(
+                n_bots=self.population_size - self.n_survived
+            )
+            # доступность врачей и график их работы не меняются
+            next_container.append(new_bots, avails.copy(), doctors.copy())
+
+            # рассчитываем оценку новых ботов
+            next_scores = self.evaluate(next_container)
+
+            # формируем общий контейнер всех ботов: рассчитанных в данном цикле и стека лучших
+            next_container.append(bots, avails, doctors)
+            next_container.set_scores(next_scores + scores)
+
+            # производим отбор из всех ботов:
+            container = self.select(next_container)
+            gc.collect()
+
+        # пишем лучшего бота в базу
+        # TODO: нужно также сохранять доступность и норму времени (длительность рабочего дня) - ок
+        best_bots, avails, _, _ = container.get([0])
+        self.save_bot(best_bots[0], avails[0])
+
+
+    def save_bot(self, bot, avail):
+
         q = f"""
             select id, uid, day_start_time, schedule_type, time_rate,
             row_number() over (order by id) - 1 as row_index 
@@ -451,16 +619,13 @@ class Scheduler:
             doctors = doctors.set_index('row_index').T.to_dict()
         db.close()
 
-        print(doctors[1])
-
-        best_bot = best_bots[0]
         output = []
-        for doctor_index in range(len(best_bot)):
-            for day_index in range(len(best_bot[0, 0])):
+        for doctor_index in range(len(bot)):
+            for day_index in range(len(bot[0, 0])):
                 time_volumes = []
                 mods = []
-                for mod_index in range(len(best_bot[0])):
-                    time_volume = timedelta(seconds=best_bot[doctor_index, mod_index, day_index].item())
+                for mod_index in range(len(bot[0])):
+                    time_volume = timedelta(seconds=bot[doctor_index, mod_index, day_index].item())
                     if time_volume > timedelta(seconds=0):
                         time_volumes.append(time_volume)
                         mods.append(mod_index)
@@ -477,9 +642,7 @@ class Scheduler:
             row['doctor'] = doctor['uid']
             row['day_start'] = datetime.combine(
                 self.month_layout['month_start'] + timedelta(days=row['day_index']), doctor['day_start_time'])
-            # TODO: пока возьмём из первого бота (т.к. она одинаковая),
-            #       но нужно вместе с ботами хранить связанные данные (ввести ID бота или как-то ещё)
-            row['availability'] = self.v_avail[0][doctor_index][row['day_index']]
+            row['availability'] = avail[doctor_index][row['day_index']]
 
             if row['availability'] == 1:
                 day_time = timedelta(hours=8)
@@ -493,7 +656,7 @@ class Scheduler:
             if len(row['mods']) > 0:
                 mods = row['mods']
                 for mod_index in mods:
-                    # TODO: пока пишем без КУ
+                    # TODO: в БД пишем без КУ
                     doctor_day_plan.append(
                         [version, row['uid'], MODALITIES[mod_index], 'none', row['time_volume']])
             return row
@@ -521,39 +684,53 @@ class Scheduler:
         t.set('upsert_with_cursor', df_day, 'doctor_day_plan',
               unique=['version', 'doctor_availability', 'modality', 'contrast_enhancement'])
         t.call()
-
         db.close()
-
-        # for mod_index in range(len(MODALITIES)):
-        #     df = pd.DataFrame(best_bots[0][:, mod_index, :])
-        #     print(df.head())
-        #     break
-        if True:
-            return
+        print('Данные записаны')
 
 
-        for generation in range(self.n_generations):
-            # print(f'Поколение #{generation}')
-            # производим отбор
-            best_bots = self.select(bot_scores)
-            # скрещиваем ботов
-            new_bots = self.mate(best_bots)
-            # производим мутацию
-            new_bots = self.mutate(new_bots)
+class Test:
 
-            # добавляем случайных ботов
-            extra_bots, extra_avails, extra_doctors = self.initialize(
-                n_bots=self.population_size - self.n_survived
-            )
-            self.v_bot = np.stack([new_bots, extra_bots])
-            # доступность врачей и график их работы не меняются
-            self.v_avail = np.stack([self.v_avail, extra_avails])
-            self.v_doctor = np.stack([self.v_doctor, extra_doctors])
+    def __init__(self, month_start):
+        self.month_start = month_start
 
-            # вычисляем оценку всех ботов: рассчитанных в данном и стека лучших
-            all_scores = self.evaluate() + bot_scores
-            # производим отбор
-            best_bots = self.select(all_scores)
+    def get_bots(self):
+        gen = np.random.default_rng()
+        bots = np.arange(144)
+        zero_indices = gen.integers(0, len(bots), size=len(bots) // 2)
+        bots[zero_indices] = 0
+        gen.shuffle(bots)
+        bots.shape = (2, 3, len(MODALITIES), 4)
+
+        return bots
+
+    def run(self):
+        # self.n_generations = n_generations
+        # self.population_size = population_size
+        # self.n_survived = n_survived
+
+        scheduler = Scheduler(
+            self.month_start,
+            plan_version='validation',
+            n_generations=2,
+            population_size=3,
+            n_survived=2,
+        )
+        bots = self.get_bots()
+        v_mod = np.array([
+            [1, 0, 1, 2, 1, 1],
+            [0, 2, 0, 1, 1, 0],
+            [2, 1, 1, 0, 0, 1]
+        ])
+
+        mask = np.ones(bots.shape, dtype=np.bool_)
+        mask = mask & v_mod[np.newaxis, :, :, np.newaxis] == 0
+        bots[mask] = 0
+        scheduler.v_mod = v_mod[np.newaxis, :, :, np.newaxis]
+
+        print(f'initial bots:\n{bots}')
+        scheduler.mate(bots)
+        # print(f'bot0:\n{bots[0]}')
+        # print(f'bot1:\n{bots[1]}')
 
 
 if __name__ == '__main__':
@@ -562,12 +739,15 @@ if __name__ == '__main__':
                         formatter=dict(float=lambda x: f'{x:.5f}'))
     month_start = datetime(2024, 1, 1)
 
+    # test = Test(month_start)
+    # test.run()
+
     scheduler = Scheduler(
         month_start,
         plan_version='validation',
-        n_generations=1,
-        population_size=4,
-        n_survived=4,
+        n_generations=2,
+        population_size=3,
+        n_survived=2,
     )
     scheduler.run()
 

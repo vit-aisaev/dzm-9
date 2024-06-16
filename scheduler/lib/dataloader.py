@@ -361,6 +361,21 @@ def load_doctor_day_plan(tablename, month_start, version):
     db.close()
 
 
+def create_day_plan(tablename, month_start, version):
+    day_plan_df = get_day_plan(version, month_start, with_ce=True)
+    day_plan_df['uid'] = None
+    day_plan_df['uid'] = day_plan_df['uid'].apply(lambda uid: uuid.uuid4())
+    day_plan_df['version'] = version
+    day_plan_df['time_volume'] = day_plan_df['time_volume'].apply(lambda t: timedelta(hours=t))
+    day_plan_df = day_plan_df.rename(columns={'plan_date': 'day_start'}) \
+        .drop(columns=['week', 'weekday', 'month', 'day_number', 'day_index'])
+    print(day_plan_df.head())
+
+    db = DB()
+    unique = ['day_start', 'modality', 'contrast_enhancement']
+    db.upsert(day_plan_df, tablename, unique)
+    db.close()
+
 def get_day_plan(version, month_start: datetime, with_ce=False):
 
     month_start_data = month_start.isocalendar()  # datetime.IsoCalendarDate(year=2024, week=1, weekday=1)
@@ -520,9 +535,11 @@ if __name__ == '__main__':
     # load_doctor('doctor', 'Пример табеля.xlsx', 'for_load')
     # генерация таблицы доступности врачей
     start_of_month = datetime(2024, 1, 1)
-    load_doctor_availability('doctor_availability', start_of_month, version='base')
+    # load_doctor_availability('doctor_availability', start_of_month, version='base')
     # генерация записей по работе врача в течение дня
     # load_doctor_day_plan('doctor_day_plan', start_of_month, version='base')
+    # генерация таблицы плана по дням
+    create_day_plan('day_plan', start_of_month, 'validation')
 
     # получение сводного плана
     # month_start = datetime(2024, 2, 1)
